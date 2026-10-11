@@ -1,0 +1,12 @@
+# Môi trường ảo Python (tuyệt đối không push cái này lên)
+.venv/
+venv/
+env/
+# Bytecode & Cache
+__pycache__/
+*.py[cod]
+.ipynb_checkpoints/
+# File tạm hệ điều hành & IDE
+.vscode/
+.DS_Store
+Thumbs.db
