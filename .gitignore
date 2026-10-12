@@ -10,3 +10,8 @@ __pycache__/
 .vscode/
 .DS_Store
 Thumbs.db
+# Trọng số mô hình Deep Learning lớn (> 100MB)
+*.safetensors
+*.bin
+*.pt
+*.pth
