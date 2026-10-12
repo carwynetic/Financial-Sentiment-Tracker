@@ -1,0 +1,41 @@
+{
+    "model_name": "Loughran-McDonald Lexicon Baseline",
+    "threshold": 0.05,
+    "total_samples": 518,
+    "accuracy": 0.5617760617760618,
+    "macro_f1": 0.435176138714646,
+    "weighted_f1": 0.555751609899692,
+    "classification_report": {
+        "Negative (0)": {
+            "precision": 0.2361111111111111,
+            "recall": 0.2698412698412698,
+            "f1-score": 0.2518518518518518,
+            "support": 63.0
+        },
+        "Neutral (1)": {
+            "precision": 0.6763848396501457,
+            "recall": 0.7204968944099379,
+            "f1-score": 0.6977443609022557,
+            "support": 322.0
+        },
+        "Positive (2)": {
+            "precision": 0.4077669902912621,
+            "recall": 0.3157894736842105,
+            "f1-score": 0.3559322033898305,
+            "support": 133.0
+        },
+        "accuracy": 0.5617760617760618,
+        "macro avg": {
+            "precision": 0.44008764701750636,
+            "recall": 0.4353758793118061,
+            "f1-score": 0.435176138714646,
+            "support": 518.0
+        },
+        "weighted avg": {
+            "precision": 0.5538685870194687,
+            "recall": 0.5617760617760618,
+            "f1-score": 0.555751609899692,
+            "support": 518.0
+        }
+    }
+}
