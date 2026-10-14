@@ -1,0 +1,23 @@
+{
+    "manifest_version": 3,
+    "name": "FinBERT Sentiment Tracker",
+    "version": "1.0.0",
+    "description": "Phân tích cảm xúc tin tức tài chính tức thì bằng mô hình FinBERT AI (TMG301)",
+    "permissions": [
+        "activeTab",
+        "scripting",
+        "contextMenus",
+        "storage"
+    ],
+    "host_permissions": [
+        "http://127.0.0.1:8000/*",
+        "http://localhost:8000/*"
+    ],
+    "action": {
+        "default_popup": "popup.html",
+        "default_title": "FinBERT Financial Sentiment"
+    },
+    "background": {
+        "service_worker": "background.js"
+    }
+}

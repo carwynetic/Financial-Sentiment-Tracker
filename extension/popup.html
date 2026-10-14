@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="UTF-8">
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        }
+
+        body {
+            width: 360px;
+            background-color: #0b0f17;
+            color: #f1f5f9;
+            padding: 14px;
+            font-size: 13px;
+        }
+
+        .header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid #1e293b;
+            padding-bottom: 10px;
+            margin-bottom: 12px;
+        }
+
+        .logo {
+            font-weight: 700;
+            font-size: 14px;
+            color: #38bdf8;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: #22c55e;
+            display: inline-block;
+            box-shadow: 0 0 6px #22c55e;
+        }
+
+        .status-offline {
+            background-color: #ef4444;
+            box-shadow: 0 0 6px #ef4444;
+        }
+
+        textarea {
+            width: 100%;
+            height: 75px;
+            background: #111827;
+            border: 1px solid #374151;
+            border-radius: 6px;
+            color: #e2e8f0;
+            padding: 8px;
+            font-size: 12px;
+            resize: none;
+            outline: none;
+            margin-bottom: 10px;
+        }
+
+        textarea:focus {
+            border-color: #38bdf8;
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+
+        button {
+            flex: 1;
+            padding: 8px;
+            border: none;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.2s;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #0284c7, #2563eb);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            opacity: 0.9;
+        }
+
+        .btn-secondary {
+            background: #1e293b;
+            color: #94a3b8;
+        }
+
+        .btn-secondary:hover {
+            background: #334155;
+            color: white;
+        }
+
+        .result-box {
+            display: none;
+            background: #111827;
+            border: 1px solid #1e293b;
+            border-radius: 8px;
+            padding: 12px;
+            text-align: center;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 5px 14px;
+            border-radius: 20px;
+            font-weight: 700;
+            font-size: 13px;
+            text-transform: uppercase;
+            margin-bottom: 8px;
+        }
+
+        .positive {
+            background: #064e3b;
+            color: #34d399;
+            border: 1px solid #059669;
+        }
+
+        .negative {
+            background: #7f1d1d;
+            color: #f87171;
+            border: 1px solid #dc2626;
+        }
+
+        .neutral {
+            background: #1e293b;
+            color: #cbd5e1;
+            border: 1px solid #475569;
+        }
+
+        .progress-bar-container {
+            margin-top: 10px;
+            text-align: left;
+        }
+
+        .bar-row {
+            display: flex;
+            justify-content: space-between;
+            font-size: 11px;
+            margin-bottom: 3px;
+            color: #94a3b8;
+        }
+
+        .bar-bg {
+            width: 100%;
+            height: 6px;
+            background: #1e293b;
+            border-radius: 3px;
+            overflow: hidden;
+            margin-bottom: 6px;
+        }
+
+        .bar-fill {
+            height: 100%;
+            transition: width 0.4s ease-out;
+        }
+
+        .bar-pos {
+            background: #22c55e;
+        }
+
+        .bar-neg {
+            background: #ef4444;
+        }
+
+        .bar-neu {
+            background: #64748b;
+        }
+
+        .footer {
+            margin-top: 10px;
+            font-size: 10px;
+            color: #64748b;
+            text-align: center;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="header">
+        <div class="logo">⚡ FinBERT Tracker</div>
+        <div id="statusIndicator"><span class="status-dot"></span> <span id="statusText"
+                style="font-size:11px; color:#94a3b8;">GPU Ready</span></div>
+    </div>
+
+    <textarea id="inputText"
+        placeholder="Đang đọc nội dung bạn bôi đen trên trang web... hoặc dán tin tức vào đây"></textarea>
+
+    <div class="btn-group">
+        <button id="btnFetchSelection" class="btn-secondary" title="Lấy chữ đang bôi đen trên tab hiện tại">📋 Lấy chữ
+            bôi đen</button>
+        <button id="btnAnalyze" class="btn-primary">🚀 Phân tích ngay</button>
+    </div>
+
+    <div id="resultBox" class="result-box">
+        <div id="sentimentBadge" class="badge">BULLISH</div>
+        <div id="confidenceText" style="font-size: 11px; color: #94a3b8; margin-bottom: 8px;">Độ tin cậy: 95.4%</div>
+
+        <div class="progress-bar-container">
+            <div class="bar-row"><span>Positive (Tăng)</span><span id="posVal">0%</span></div>
+            <div class="bar-bg">
+                <div id="posBar" class="bar-fill bar-pos" style="width:0%"></div>
+            </div>
+
+            <div class="bar-row"><span>Negative (Giảm)</span><span id="negVal">0%</span></div>
+            <div class="bar-bg">
+                <div id="negBar" class="bar-fill bar-neg" style="width:0%"></div>
+            </div>
+
+            <div class="bar-row"><span>Neutral (Trung tính)</span><span id="neuVal">0%</span></div>
+            <div class="bar-bg">
+                <div id="neuBar" class="bar-fill bar-neu" style="width:0%"></div>
+            </div>
+        </div>
+
+        <div id="latencyText" style="font-size: 10px; color: #0284c7; margin-top: 6px;">⚡ Latency: 18ms</div>
+    </div>
+
+    <div class="footer">TMG301 Capstone • FPT University</div>
+
+    <script src="popup.js"></script>
+</body>
+
+</html>
