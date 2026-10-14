@@ -1,0 +1,41 @@
+{
+    "benchmark": "SEntFiN 1.0 (Entity-Aware)",
+    "model_name": "yiyanghkust/finbert-tone",
+    "best_val_macro_f1": 0.8529956781631941,
+    "test_accuracy": 0.8409405255878285,
+    "test_macro_f1": 0.8410587688057976,
+    "test_weighted_f1": 0.8409276122718915,
+    "classification_report": {
+        "Negative (0)": {
+            "precision": 0.8615664845173042,
+            "recall": 0.8254799301919721,
+            "f1-score": 0.8431372549019608,
+            "support": 573.0
+        },
+        "Neutral (1)": {
+            "precision": 0.8233082706766918,
+            "recall": 0.8305941845764855,
+            "f1-score": 0.8269351793580868,
+            "support": 791.0
+        },
+        "Positive (2)": {
+            "precision": 0.8442822384428224,
+            "recall": 0.8621118012422361,
+            "f1-score": 0.8531038721573448,
+            "support": 805.0
+        },
+        "accuracy": 0.8409405255878285,
+        "macro avg": {
+            "precision": 0.8430523312122729,
+            "recall": 0.839395305336898,
+            "f1-score": 0.8410587688057976,
+            "support": 2169.0
+        },
+        "weighted avg": {
+            "precision": 0.8411994650438684,
+            "recall": 0.8409405255878285,
+            "f1-score": 0.8409276122718915,
+            "support": 2169.0
+        }
+    }
+}

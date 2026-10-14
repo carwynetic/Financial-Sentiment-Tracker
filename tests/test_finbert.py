@@ -5,7 +5,11 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import json
 import pytest
 import torch
-from transformers import AutoTokenizer, AutoModelForSequenceClassification
+from transformers import (
+    AutoTokenizer, 
+    AutoModelForSequenceClassification, 
+    BertForSequenceClassification
+)
 
 from src.models.evaluate_zero_shot_finbert import (
     build_hf_to_project_mapping,
@@ -75,3 +79,33 @@ def test_finbert_prediction_sanity():
             assert pred_project_label == expected_label, (
                 f"Dự đoán sai câu: '{text}'. Dự đoán: {pred_project_label}, Kỳ vọng: {expected_label}"
             )
+
+
+def test_entity_aware_disambiguation_sanity():
+    """Kiểm tra mô hình Entity-Aware phân định được 2 thực thể đối lập trong cùng 1 câu thực tế."""
+    model_dir = Path("models/finbert_entity_best")
+    if not model_dir.exists():
+        pytest.skip("Chưa tìm thấy models/finbert_entity_best")
+
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    tokenizer = AutoTokenizer.from_pretrained(model_dir)
+    model = BertForSequenceClassification.from_pretrained(model_dir).to(device)
+    model.eval()
+
+    # Câu thực tế trong SEntFiN chứa 2 thực thể đối lập: Gold tăng (Positive), rupee suy yếu (Negative)
+    headline = "Gold extends gains on festive buying, weak rupee"
+
+    # 1. Dự đoán cho Gold -> Phải là Positive (2)
+    inputs_gold = tokenizer("Gold", text_pair=headline, return_tensors="pt", truncation=True, max_length=128).to(device)
+    with torch.no_grad():
+        out_gold = model(**inputs_gold)
+        pred_gold = torch.argmax(out_gold.logits, dim=1).item()
+
+    # 2. Dự đoán cho rupee -> Phải là Negative (0)
+    inputs_rupee = tokenizer("rupee", text_pair=headline, return_tensors="pt", truncation=True, max_length=128).to(device)
+    with torch.no_grad():
+        out_rupee = model(**inputs_rupee)
+        pred_rupee = torch.argmax(out_rupee.logits, dim=1).item()
+
+    assert pred_gold == 2, f"Kỳ vọng Gold là Positive (2) nhưng dự đoán: {pred_gold}"
+    assert pred_rupee == 0, f"Kỳ vọng rupee là Negative (0) nhưng dự đoán: {pred_rupee}"
