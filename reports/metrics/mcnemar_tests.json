@@ -1,0 +1,65 @@
+{
+    "FinBERT_Fine_Tuned_vs_Linear_SVM": {
+        "model_a": "FinBERT_Fine_Tuned",
+        "model_b": "Linear_SVM",
+        "contingency_table": [
+            [
+                421,
+                56
+            ],
+            [
+                27,
+                14
+            ]
+        ],
+        "discordant_pairs": {
+            "a_correct_b_wrong (b)": 56,
+            "a_wrong_b_correct (c)": 27
+        },
+        "chi2_statistic": 9.44578313253012,
+        "p_value": 0.00211635115004815,
+        "significant_at_0.05": true
+    },
+    "FinBERT_Fine_Tuned_vs_Logistic_Regression": {
+        "model_a": "FinBERT_Fine_Tuned",
+        "model_b": "Logistic_Regression",
+        "contingency_table": [
+            [
+                419,
+                58
+            ],
+            [
+                25,
+                16
+            ]
+        ],
+        "discordant_pairs": {
+            "a_correct_b_wrong (b)": 58,
+            "a_wrong_b_correct (c)": 25
+        },
+        "chi2_statistic": 12.337349397590362,
+        "p_value": 0.000443984978978538,
+        "significant_at_0.05": true
+    },
+    "FinBERT_Fine_Tuned_vs_Loughran_McDonald": {
+        "model_a": "FinBERT_Fine_Tuned",
+        "model_b": "Loughran_McDonald",
+        "contingency_table": [
+            [
+                272,
+                205
+            ],
+            [
+                19,
+                22
+            ]
+        ],
+        "discordant_pairs": {
+            "a_correct_b_wrong (b)": 205,
+            "a_wrong_b_correct (c)": 19
+        },
+        "chi2_statistic": 152.79017857142858,
+        "p_value": 4.25725113732296e-35,
+        "significant_at_0.05": true
+    }
+}
