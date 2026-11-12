@@ -200,6 +200,12 @@
     <textarea id="inputText"
         placeholder="Đang đọc nội dung bạn bôi đen trên trang web... hoặc dán tin tức vào đây"></textarea>
 
+    <div style="margin-bottom: 8px;">
+        <input type="text" id="targetEntity"
+            placeholder="🎯 Target Entity / Ticker (tùy chọn: Gold, TSLA, AAPL, rupee...)"
+            style="width: 100%; background: #111827; border: 1px solid #374151; border-radius: 6px; color: #38bdf8; padding: 7px 9px; font-size: 11px; font-family: inherit; outline: none; transition: border-color 0.2s;" />
+    </div>
+
     <div class="btn-group">
         <button id="btnFetchSelection" class="btn-secondary" title="Lấy chữ đang bôi đen trên tab hiện tại">📋 Lấy chữ
             bôi đen</button>
@@ -207,6 +213,7 @@
     </div>
 
     <div id="resultBox" class="result-box">
+        <div id="targetEntityDisplay" style="font-size: 11px; color: #38bdf8; font-weight: 600; margin-bottom: 4px; display: none;"></div>
         <div id="sentimentBadge" class="badge">BULLISH</div>
         <div id="confidenceText" style="font-size: 11px; color: #94a3b8; margin-bottom: 8px;">Độ tin cậy: 95.4%</div>
 
@@ -230,7 +237,7 @@
         <div id="latencyText" style="font-size: 10px; color: #0284c7; margin-top: 6px;">⚡ Latency: 18ms</div>
     </div>
 
-    <div class="footer">TMG301 Capstone • FPT University</div>
+    <div class="footer">FinBERT • FPT University</div>
 
     <script src="popup.js"></script>
 </body>

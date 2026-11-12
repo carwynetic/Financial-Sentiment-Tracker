@@ -24,11 +24,14 @@ from transformers import AutoTokenizer, BertForSequenceClassification
 # 1. THIẾT LẬP ĐƯỜNG DẪN & THIẾT BỊ
 BASE_DIR = Path(__file__).resolve().parents[2]
 MODEL_DIR = BASE_DIR / "models" / "finbert_best"
+ENTITY_MODEL_DIR = BASE_DIR / "models" / "finbert_entity_best"
 FALLBACK_MODEL_NAME = "ProsusAI/finbert"
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 tokenizer = None
 model = None
+entity_tokenizer = None
+entity_model = None
 
 # Ánh xạ nhãn chuẩn đã đồng bộ ở Phase 3
 ID2LABEL = {0: "negative", 1: "neutral", 2: "positive"}
@@ -37,7 +40,7 @@ LABEL2ID = {"negative": 0, "neutral": 1, "positive": 2}
 
 # 2. HÀM NẠP MODEL & WARMUP GPU
 def load_sentiment_model():
-    """Nạp weights FinBERT và tokenizer lên bộ nhớ GPU/CPU."""
+    """Nạp weights FinBERT câu và tokenizer lên bộ nhớ GPU/CPU."""
     global tokenizer, model
     if model is not None:
         return
@@ -69,11 +72,47 @@ def load_sentiment_model():
         print("[✓] Đã khởi tạo FinBERT trên CPU.")
 
 
+def load_entity_model():
+    """Nạp weights FinBERT Entity-Aware (SEntFiN 1.0) và warmup."""
+    global entity_tokenizer, entity_model
+    if entity_model is not None:
+        return
+    
+    if ENTITY_MODEL_DIR.exists():
+        print(f"[*] Nạp mô hình FinBERT Entity-Aware từ: {ENTITY_MODEL_DIR}")
+        model_source = str(ENTITY_MODEL_DIR)
+    else:
+        print(f"[!] Không tìm thấy local entity weights, tái sử dụng model câu làm fallback.")
+        entity_tokenizer = tokenizer
+        entity_model = model
+        return
+
+    entity_tokenizer = AutoTokenizer.from_pretrained(model_source)
+    entity_model = BertForSequenceClassification.from_pretrained(
+        model_source,
+        num_labels=3,
+        id2label=ID2LABEL,
+        label2id=LABEL2ID
+    ).to(device)
+    entity_model.eval()
+
+    if torch.cuda.is_available():
+        warmup_entity = "Gold"
+        warmup_headline = "Gold extends gains on festive buying, weak rupee"
+        inputs = entity_tokenizer(warmup_entity, text_pair=warmup_headline, return_tensors="pt", truncation=True, max_length=128).to(device)
+        with torch.no_grad():
+            _ = entity_model(**inputs)
+        print(f"[✓] Đã khởi tạo và warmup FinBERT Entity-Aware trên GPU: {torch.cuda.get_device_name(0)}")
+    else:
+        print("[✓] Đã khởi tạo FinBERT Entity-Aware trên CPU.")
+
+
 # 3. QUẢN LÝ VÒNG ĐỜI ỨNG DỤNG (LIFESPAN)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Khởi động: nạp model
+    # Khởi động: nạp model câu và model entity-aware
     load_sentiment_model()
+    load_entity_model()
     yield
     # Dọn dẹp: dọn sạch VRAM
     if torch.cuda.is_available():
@@ -135,6 +174,26 @@ class BatchSentimentResponse(BaseModel):
     predictions: List[SentimentResponse]
 
 
+class EntitySentimentRequest(BaseModel):
+    entity: str = Field(..., description="Tên thực thể / Ticker mục tiêu (vd: Gold, Apple, TSLA, rupee)")
+    headline: str = Field(..., description="Tiêu đề hoặc đoạn tin tức chứa thực thể")
+
+    @field_validator("entity", "headline")
+    @classmethod
+    def validate_non_empty(cls, v: str) -> str:
+        if not v or not v.strip():
+            raise ValueError("Trường thông tin không được để trống hoặc chỉ chứa khoảng trắng.")
+        return v.strip()
+
+
+class EntitySentimentResponse(BaseModel):
+    entity: str
+    headline: str
+    sentiment: str
+    confidence: float
+    probabilities: Dict[str, float]
+
+
 # 5. HÀM SUY LUẬN LÕI (CORE INFERENCE)
 def predict_text_sentiment(text: str) -> Dict:
     """Suy luận cảm xúc cho 1 câu văn bản."""
@@ -160,6 +219,42 @@ def predict_text_sentiment(text: str) -> Dict:
     }
 
 
+def predict_entity_sentiment_text(entity: str, headline: str) -> Dict:
+    """Suy luận cảm xúc hướng đối tượng cho cặp (entity, headline) bằng Cross-Attention."""
+    target_model = entity_model if entity_model is not None else model
+    target_tokenizer = entity_tokenizer if entity_tokenizer is not None else tokenizer
+
+    inputs = target_tokenizer(
+        entity,
+        text_pair=headline,
+        return_tensors="pt",
+        truncation=True,
+        max_length=128,
+        padding=True
+    ).to(device)
+
+    with torch.no_grad():
+        outputs = target_model(**inputs)
+        probs = torch.softmax(outputs.logits, dim=-1).squeeze(0)
+
+    pred_idx = torch.argmax(probs).item()
+    pred_label = ID2LABEL[pred_idx]
+    confidence = float(probs[pred_idx].item())
+
+    probabilities = {
+        ID2LABEL[i]: round(float(probs[i].item()), 4)
+        for i in range(len(ID2LABEL))
+    }
+
+    return {
+        "entity": entity,
+        "headline": headline,
+        "sentiment": pred_label,
+        "confidence": round(confidence, 4),
+        "probabilities": probabilities
+    }
+
+
 # 6. CÁC API ENDPOINTS
 @app.get("/health", summary="Kiểm tra trạng thái server")
 def health_check():
@@ -167,7 +262,9 @@ def health_check():
         "status": "ok",
         "device": str(device),
         "model_loaded": model is not None,
-        "model_source": str(MODEL_DIR) if MODEL_DIR.exists() else FALLBACK_MODEL_NAME
+        "entity_model_loaded": entity_model is not None,
+        "model_source": str(MODEL_DIR) if MODEL_DIR.exists() else FALLBACK_MODEL_NAME,
+        "entity_model_source": str(ENTITY_MODEL_DIR) if ENTITY_MODEL_DIR.exists() else None
     }
 
 
@@ -175,6 +272,14 @@ def health_check():
 def predict_single(request: SentimentRequest):
     try:
         return predict_text_sentiment(request.text)
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+
+
+@app.post("/predict/entity-sentiment", response_model=EntitySentimentResponse, summary="Dự đoán cảm xúc theo thực thể (Entity-Aware Cross-Attention)")
+def predict_entity_sentiment_endpoint(request: EntitySentimentRequest):
+    try:
+        return predict_entity_sentiment_text(request.entity, request.headline)
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
@@ -280,6 +385,8 @@ if DIST_DIR.exists():
 # Đảm bảo model được nạp tự động khi import module
 if model is None:
     load_sentiment_model()
+if entity_model is None:
+    load_entity_model()
 
 if __name__ == "__main__":
     import uvicorn

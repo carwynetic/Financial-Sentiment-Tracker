@@ -2,9 +2,11 @@ const API_URL = "http://127.0.0.1:8000";
 
 document.addEventListener("DOMContentLoaded", async () => {
     const inputText = document.getElementById("inputText");
+    const targetEntity = document.getElementById("targetEntity");
     const btnAnalyze = document.getElementById("btnAnalyze");
     const btnFetchSelection = document.getElementById("btnFetchSelection");
     const resultBox = document.getElementById("resultBox");
+    const targetEntityDisplay = document.getElementById("targetEntityDisplay");
     const sentimentBadge = document.getElementById("sentimentBadge");
     const confidenceText = document.getElementById("confidenceText");
     const latencyText = document.getElementById("latencyText");
@@ -23,7 +25,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         if (res.selectedText && res.selectedText.trim()) {
             inputText.value = res.selectedText.trim();
             chrome.storage.local.remove(["selectedText"]);
-            analyzeSentiment(inputText.value);
+            analyzeSentiment(inputText.value, targetEntity.value.trim());
         } else {
             // Nếu không, thử lấy nội dung bôi đen trực tiếp từ tab đang active
             fetchSelectionFromActiveTab();
@@ -42,14 +44,16 @@ document.addEventListener("DOMContentLoaded", async () => {
             alert("Vui lòng nhập hoặc bôi đen văn bản cần phân tích!");
             return;
         }
-        analyzeSentiment(text);
+        analyzeSentiment(text, targetEntity.value.trim());
     });
 
     async function checkBackendHealth() {
         try {
             const res = await fetch(`${API_URL}/health`);
             if (res.ok) {
-                document.getElementById("statusIndicator").innerHTML = '<span class="status-dot"></span> <span style="font-size:11px; color:#22c55e;">GPU Online</span>';
+                const data = await res.json();
+                const entityReady = data.entity_model_loaded ? " + Entity-Aware" : "";
+                document.getElementById("statusIndicator").innerHTML = `<span class="status-dot"></span> <span style="font-size:11px; color:#22c55e;">GPU Online${entityReady}</span>`;
             }
         } catch (e) {
             document.getElementById("statusIndicator").innerHTML = '<span class="status-dot status-offline"></span> <span style="font-size:11px; color:#ef4444;">Offline</span>';
@@ -65,28 +69,36 @@ document.addEventListener("DOMContentLoaded", async () => {
             }, (results) => {
                 if (results && results[0] && results[0].result && results[0].result.trim()) {
                     inputText.value = results[0].result.trim();
-                    analyzeSentiment(inputText.value);
+                    analyzeSentiment(inputText.value, targetEntity.value.trim());
                 }
             });
         });
     }
 
-    async function analyzeSentiment(text) {
+    async function analyzeSentiment(text, entity) {
         btnAnalyze.innerText = "⏳ Đang quét...";
         btnAnalyze.disabled = true;
 
         try {
             const startTime = performance.now();
-            const res = await fetch(`${API_URL}/predict/sentiment`, {
+            let endpoint = `${API_URL}/predict/sentiment`;
+            let payload = { text: text };
+
+            if (entity) {
+                endpoint = `${API_URL}/predict/entity-sentiment`;
+                payload = { entity: entity, headline: text };
+            }
+
+            const res = await fetch(endpoint, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ text: text })
+                body: JSON.stringify(payload)
             });
             const latency = (performance.now() - startTime).toFixed(1);
 
             if (res.ok) {
                 const data = await res.json();
-                displayResult(data, latency);
+                displayResult(data, latency, entity);
             } else {
                 alert("Lỗi phân tích: " + (await res.text()));
             }
@@ -98,9 +110,17 @@ document.addEventListener("DOMContentLoaded", async () => {
         }
     }
 
-    function displayResult(data, latency) {
+    function displayResult(data, latency, entity) {
         resultBox.style.display = "block";
         const sent = data.sentiment.toLowerCase();
+
+        // Hiển thị thông tin thực thể nếu là entity-aware
+        if (entity && targetEntityDisplay) {
+            targetEntityDisplay.style.display = "block";
+            targetEntityDisplay.innerHTML = `🎯 Target Entity: <span style="color:#ffffff;">${data.entity}</span> <span style="font-size:10px; color:#94a3b8;">(Cross-Attention)</span>`;
+        } else if (targetEntityDisplay) {
+            targetEntityDisplay.style.display = "none";
+        }
 
         // Thiết lập nhãn cảm xúc
         if (sent === "positive") {

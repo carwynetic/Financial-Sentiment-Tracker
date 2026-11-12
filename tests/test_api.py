@@ -109,3 +109,44 @@ def test_api_latency(client):
     assert response.status_code == 200
     print(f"\n[BENCHMARK] Latency đơn mẫu: {latency_ms:.2f} ms")
     assert latency_ms < 100.0, f"Độ trễ quá cao: {latency_ms:.2f} ms"
+
+
+def test_predict_entity_sentiment_positive(client):
+    """Kiểm tra dự đoán cảm xúc cho thực thể mang tính tích cực (Gold) trong câu đa thực thể."""
+    headline = "Gold extends gains on festive buying, weak rupee"
+    payload = {"entity": "Gold", "headline": headline}
+    response = client.post("/predict/entity-sentiment", json=payload)
+    assert response.status_code == 200
+    
+    data = response.json()
+    assert data["entity"] == "Gold"
+    assert data["headline"] == headline
+    assert data["sentiment"] == "positive"
+    assert data["confidence"] > 0.6
+    assert "probabilities" in data
+    assert abs(sum(data["probabilities"].values()) - 1.0) < 1e-3
+
+
+def test_predict_entity_sentiment_negative(client):
+    """Kiểm tra dự đoán cảm xúc cho thực thể đối lập mang tính tiêu cực (rupee) trong cùng 1 câu."""
+    headline = "Gold extends gains on festive buying, weak rupee"
+    payload = {"entity": "rupee", "headline": headline}
+    response = client.post("/predict/entity-sentiment", json=payload)
+    assert response.status_code == 200
+    
+    data = response.json()
+    assert data["entity"] == "rupee"
+    assert data["headline"] == headline
+    assert data["sentiment"] == "negative"
+    assert data["confidence"] > 0.5
+
+
+def test_predict_entity_sentiment_validation_errors(client):
+    """Kiểm tra validation khi thiếu hoặc để trống entity hoặc headline."""
+    # Trống entity
+    res1 = client.post("/predict/entity-sentiment", json={"entity": "", "headline": "Some news"})
+    assert res1.status_code == 422
+
+    # Trống headline
+    res2 = client.post("/predict/entity-sentiment", json={"entity": "Apple", "headline": "   "})
+    assert res2.status_code == 422
