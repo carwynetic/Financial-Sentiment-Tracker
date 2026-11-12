@@ -2,14 +2,19 @@
 .venv/
 venv/
 env/
+
 # Bytecode & Cache
 __pycache__/
 *.py[cod]
 .ipynb_checkpoints/
+.pytest_cache/
+
 # File tạm hệ điều hành & IDE
 .vscode/
+.idea/
 .DS_Store
 Thumbs.db
+
 # Trọng số mô hình Deep Learning lớn (> 100MB)
 *.safetensors
 *.bin

@@ -4,10 +4,20 @@ from pathlib import Path
 from contextlib import asynccontextmanager
 from typing import List, Dict, Optional
 
+# Đảm bảo UTF-8 cho console trên Windows
+if sys.platform == "win32":
+    try:
+        sys.stdout.reconfigure(encoding="utf-8")
+        sys.stderr.reconfigure(encoding="utf-8")
+    except Exception:
+        pass
+
 import torch
 import yfinance as yf
 from fastapi import FastAPI, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field, field_validator
 from transformers import AutoTokenizer, BertForSequenceClassification
 
@@ -29,6 +39,8 @@ LABEL2ID = {"negative": 0, "neutral": 1, "positive": 2}
 def load_sentiment_model():
     """Nạp weights FinBERT và tokenizer lên bộ nhớ GPU/CPU."""
     global tokenizer, model
+    if model is not None:
+        return
     
     if MODEL_DIR.exists():
         print(f"[*] Nạp mô hình FinBERT fine-tuned từ: {MODEL_DIR}")
@@ -248,6 +260,27 @@ def get_ticker_news_sentiment(symbol: str, count: int = 5):
         },
         "articles": articles_data
     }
+
+
+# 7. PHỤC VỤ GIAO DIỆN WEB (FRONTEND SPA)
+DIST_DIR = Path(__file__).resolve().parent / "frontend" / "dist"
+if DIST_DIR.exists():
+    assets_dir = DIST_DIR / "assets"
+    if assets_dir.exists():
+        app.mount("/assets", StaticFiles(directory=str(assets_dir)), name="assets")
+
+    @app.get("/{full_path:path}", summary="Phục vụ giao diện web SPA")
+    async def serve_spa(full_path: str):
+        file_path = DIST_DIR / full_path
+        if full_path and file_path.is_file():
+            return FileResponse(file_path)
+        return FileResponse(DIST_DIR / "index.html")
+
+
 # Đảm bảo model được nạp tự động khi import module
 if model is None:
     load_sentiment_model()
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run("src.app.main:app", host="127.0.0.1", port=8000, reload=False)
